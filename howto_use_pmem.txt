@@ -1,0 +1,30 @@
+Steps:
+1. Upgrade linux kernel to 5.2.8 and create file by issuing following conent.
+Use this command:
+daxctl migrate-device-model
+
+Or manual create:
+[root@localhost modprobe.d]# pwd
+/etc/modprobe.d
+[root@localhost modprobe.d]# cat daxctl.conf
+blacklist dax_pmem_compat
+alias nd:t7* dax_pmem
+
+2. Reboot host.
+
+3. Load kmem by issuing command "modprobe kmem"
+
+4. Execute following command
+echo -n dax0.0 > /sys/bus/dax/drivers/device_dax/remove_id（must step)
+echo -n dax0.0 > /sys/bus/dax/drivers/device_dax/unbind (must step)
+echo -n dax0.0 > /sys/bus/dax/drivers/kmem/new_id (must step)
+
+[root@localhost modprobe.d]# free -m
+              total        used        free      shared  buff/cache   available
+Mem:           1928         126        1657           8         143        1636
+Swap:          2047           0        2047
+[root@localhost modprobe.d]# echo -n dax0.0 > /sys/bus/dax/drivers/kmem/new_id
+[root@localhost modprobe.d]# free -m
+              total        used        free      shared  buff/cache   available
+Mem:          34056         633       33276           8         145       33096
+Swap:          2047           0        2047
