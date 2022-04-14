@@ -1,0 +1,48 @@
+
+[ctyun_tmp@ins2p12 ~]$ cat retra.stp
+#! /usr/bin/env stap
+
+#  sudo stap -DSTP_NO_OVERLOAD -v -g retra.stp
+
+probe begin {
+        print ("\n")
+}
+
+function is_retran_syn:long (skb:long)
+%{
+        struct sk_buff *skb = (struct sk_buff *)STAP_ARG_skb;
+        int ret = 0;
+
+        if (((struct tcp_skb_cb *)&(skb->cb[0]))->tcp_flags & 0x02 )
+                ret = 1;
+
+        STAP_RETVALUE = ret;
+%}
+
+probe kernel.function("__tcp_retransmit_skb")
+{
+        printf("tcp_retransmit_skb() syn flag=%d ",  is_retran_syn($skb))
+        saddr   = format_ipaddr(__ip_sock_saddr($sk), __ip_sock_family($sk))
+        daddr   = format_ipaddr(__ip_sock_daddr($sk), __ip_sock_family($sk))
+        sport   = __tcp_sock_sport($sk)
+        dport   = __tcp_sock_dport($sk)
+
+        printf("%s:%d => %s:%d\n", saddr, sport, daddr, dport)
+}
+
+probe kernel.function("tcp_v4_send_synack").return
+{
+        err = $return
+        if (err == 0) {
+                saddr   = format_ipaddr(__ip_sock_saddr($sk), __ip_sock_family($sk))
+                daddr   = format_ipaddr(__ip_sock_daddr($sk), __ip_sock_family($sk))
+                sport   = __tcp_sock_sport($sk)
+                dport   = __tcp_sock_dport($sk)
+
+                printf("synack retran %s:%d => %s:%d\n", saddr, sport, daddr, dport)
+        }
+}
+
+probe end {
+              print ("\n")
+}
